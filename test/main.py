@@ -2,7 +2,7 @@ from Interpreter import Interpreter
 
 def main():
     interpreter = Interpreter()
-    file_name = "hero.GRAH"
+    file_name = "test/hero.GRAH"
 
     try:
         with open(file_name, 'r') as file:
