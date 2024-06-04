@@ -3,13 +3,17 @@ import re
 class Interpreter:
     def __init__(self, config):
         self.variables = {}
-        self.undefined_variables = set()
         self.config = config
-        self.handlers = {
-            self.config["declare"]: self.handle_declaration,
-            self.config["display"]: self.handle_display,
-            "=": self.handle_assignment
-        }
+        self.handlers = self.create_handlers(config)
+
+    def create_handlers(self, config):
+        handlers = {}
+        for keyword in config.get("declare", []):
+            handlers[keyword] = self.handle_declaration
+        for keyword in config.get("display", []):
+            handlers[keyword] = self.handle_display
+        handlers["="] = self.handle_assignment
+        return handlers
 
     def interpret(self, program):
         lines = program.split('\n')
@@ -25,20 +29,58 @@ class Interpreter:
 
                 for keyword, handler in self.handlers.items():
                     if tokens[0] == keyword or (len(tokens) > 1 and tokens[1] == keyword):
-                        handler(tokens)
+                        if self.validate_syntax(tokens, keyword):
+                            handler(tokens)
                         matched = True
                         break
 
                 if not matched:
                     print(f"Syntax Error: Unknown statement '{statement}'.")
 
+    def validate_syntax(self, tokens, keyword):
+        if keyword in self.config["declare"]:
+            if len(tokens) < 5 or tokens[3] != "=":
+                print("Syntax Error: Invalid variable declaration.")
+                return False
+            if tokens[1] != self.config["int"] and tokens[1] != self.config["string"]:
+                print("Syntax Error: Invalid type for declaration.")
+                return False
+            if not re.match(r'^[a-zA-Z_]\w*$', tokens[2]):
+                print(f"Syntax Error: Invalid variable name '{tokens[2]}'.")
+                return False
+        elif keyword in self.config["display"]:
+            if len(tokens) < 2:
+                print("Syntax Error: Display statement must have an expression.")
+                return False
+        elif "=" in tokens:
+            if len(tokens) < 3 or tokens[1] != "=":
+                print("Syntax Error: Invalid assignment statement.")
+                return False
+            if not re.match(r'^[a-zA-Z_]\w*$', tokens[0]):
+                print(f"Syntax Error: Invalid variable name '{tokens[0]}'.")
+                return False
+        else:
+            print("Syntax Error: Unrecognized syntax.")
+            return False
+        return True
+
     def handle_declaration(self, tokens):
-        if len(tokens) < 4 or tokens[2] != "=":
+        if len(tokens) < 5 or tokens[3] != "=":
             print("Syntax Error: Invalid variable declaration.")
             return
-        var_name = tokens[1]
-        expr = " ".join(tokens[3:])
+        var_type = tokens[1]
+        var_name = tokens[2]
+        expr = " ".join(tokens[4:])
         value = self.evaluate_expression(expr.split())
+
+        if var_type == self.config["int"]:
+            value = int(value)
+        elif var_type == self.config["string"]:
+            value = str(value.strip('"'))
+        else:
+            print(f"Syntax Error: Unknown type '{var_type}' for declaration.")
+            return
+        
         self.variables[var_name] = value
 
     def handle_display(self, tokens):
@@ -110,8 +152,10 @@ class Interpreter:
 
 def main():
     config = {
-        "declare": "grah",   # Change this keyword to anything you want for variable declaration
-        "display": "display-"  # Change this keyword to anything you want for display
+        "declare": ["grahs", "hero"],   # Change this keyword to anything you want for variable declaration
+        "display": ["display-"], # Change this keyword to anything you want for display
+        "int": "inte",         # Change this keyword to anything you want for integer type
+        "string": "string"    # Change this keyword to anything you want for string type
     }
     
     interpreter = Interpreter(config)

@@ -1,3 +1,5 @@
-grah ysa = 5 + 5.
-grah x = 1.
+hero inte ysa = 5 + 5.
+grahs inte x = 1.
+grahs string name = "hero".
 display- ysa + x.
+display- name.
