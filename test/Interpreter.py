@@ -13,12 +13,14 @@ class Interpreter:
         for keyword in config.get("display", []):
             handlers[keyword] = self.handle_display
         handlers["="] = self.handle_assignment
+        handlers[config["for"]] = self.handle_for_loop
         return handlers
 
     def interpret(self, program):
         lines = program.split('\n')
-        for line in lines:
-            line = line.strip()
+        i = 0
+        while i < len(lines):
+            line = lines[i].strip()
             if line:
                 if not line.endswith('.'):
                     print("Syntax Error: Statements must end with a period.")
@@ -30,12 +32,17 @@ class Interpreter:
                 for keyword, handler in self.handlers.items():
                     if tokens[0] == keyword or (len(tokens) > 1 and tokens[1] == keyword):
                         if self.validate_syntax(tokens, keyword):
-                            handler(tokens)
+                            if keyword == self.config["for"]:
+                                i = self.handle_for_loop(tokens, lines, i)
+                            else:
+                                handler(tokens)
                         matched = True
                         break
 
                 if not matched:
                     print(f"Syntax Error: Unknown statement '{statement}'.")
+
+            i += 1
 
     def validate_syntax(self, tokens, keyword):
         if keyword in self.config["declare"]:
@@ -51,6 +58,10 @@ class Interpreter:
         elif keyword in self.config["display"]:
             if len(tokens) < 2:
                 print("Syntax Error: Display statement must have an expression.")
+                return False
+        elif keyword == self.config["for"]:
+            if len(tokens) != 5 or tokens[2] != "in" or tokens[3] != "range":
+                print("Syntax Error: Invalid 'for' loop syntax.")
                 return False
         elif "=" in tokens:
             if len(tokens) < 3 or tokens[1] != "=":
@@ -97,6 +108,31 @@ class Interpreter:
         expr = " ".join(tokens[2:])
         value = self.evaluate_expression(expr.split())
         self.variables[var_name] = value
+
+    def handle_for_loop(self, tokens, lines, start_index):
+        loop_var = tokens[1]
+        range_var = tokens[4].strip("()")
+        range_value = self.variables.get(range_var, None)
+
+        if range_value is None or not isinstance(range_value, int):
+            print(f"Error: Range variable '{range_var}' is not defined or not an integer.")
+            return start_index
+        
+        loop_body = []
+        i = start_index + 1
+
+        while i < len(lines):
+            line = lines[i].strip()
+            if line.startswith(self.config["endfor"]):
+                break
+            loop_body.append(line)
+            i += 1
+
+        for j in range(range_value):
+            self.variables[loop_var] = j
+            self.interpret("\n".join(loop_body))
+        
+        return i
 
     def evaluate_expression(self, tokens):
         stack = []
@@ -155,7 +191,9 @@ def main():
         "declare": ["grahs", "hero"],   # Change this keyword to anything you want for variable declaration
         "display": ["display-"], # Change this keyword to anything you want for display
         "int": "inte",         # Change this keyword to anything you want for integer type
-        "string": "string"    # Change this keyword to anything you want for string type
+        "string": "string",    # Change this keyword to anything you want for string type
+        "for": "for",          # Change this keyword to anything you want for 'for' loop
+        "endfor": "endfor"     # Change this keyword to anything you want for ending the 'for' loop
     }
     
     interpreter = Interpreter(config)

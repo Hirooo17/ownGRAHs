@@ -1,5 +1,2 @@
-hero inte ysa = 5 + 5.
-grahs inte x = 1.
-grahs string name = "hero".
-display- ysa + x.
-display- name.
+grahs inte ysa = 5.
+display- ysa.
