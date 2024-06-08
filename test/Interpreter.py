@@ -22,10 +22,10 @@ class Interpreter:
         while i < len(lines):
             line = lines[i].strip()
             if line:
-                if not line.endswith('.'):
+                if not line.endswith('.') and not line.endswith('{') and line != "}":
                     print("Syntax Error: Statements must end with a period.")
                     return
-                statement = line[:-1].strip()
+                statement = line[:-1].strip() if line.endswith('.') else line
                 tokens = statement.split()
                 matched = False
 
@@ -60,7 +60,7 @@ class Interpreter:
                 print("Syntax Error: Display statement must have an expression.")
                 return False
         elif keyword == self.config["for"]:
-            if len(tokens) != 5 or tokens[2] != "in" or tokens[3] != "range":
+            if len(tokens) < 5 or tokens[2] != "in" or tokens[3] != "range" or not re.match(r'\d+', tokens[4]) or not tokens[-1].endswith("{"):
                 print("Syntax Error: Invalid 'for' loop syntax.")
                 return False
         elif "=" in tokens:
@@ -111,22 +111,26 @@ class Interpreter:
 
     def handle_for_loop(self, tokens, lines, start_index):
         loop_var = tokens[1]
-        range_var = tokens[4].strip("()")
-        range_value = self.variables.get(range_var, None)
+        range_value = int(tokens[4].strip("()"))
 
-        if range_value is None or not isinstance(range_value, int):
-            print(f"Error: Range variable '{range_var}' is not defined or not an integer.")
-            return start_index
-        
         loop_body = []
         i = start_index + 1
+        nested_level = 1
 
         while i < len(lines):
             line = lines[i].strip()
-            if line.startswith(self.config["endfor"]):
-                break
+            if line == "{":
+                nested_level += 1
+            elif line == "}":
+                nested_level -= 1
+                if nested_level == 0:
+                    break
             loop_body.append(line)
             i += 1
+
+        if nested_level != 0:
+            print("Syntax Error: Mismatched braces in 'for' loop.")
+            return start_index
 
         for j in range(range_value):
             self.variables[loop_var] = j
@@ -188,12 +192,12 @@ class Interpreter:
 
 def main():
     config = {
-        "declare": ["grahs", "hero"],   # Change this keyword to anything you want for variable declaration
+        "declare": ["grah", "hero"],   # Change this keyword to anything you want for variable declaration
         "display": ["display-"], # Change this keyword to anything you want for display
-        "int": "inte",         # Change this keyword to anything you want for integer type
+        "int": "int",         # Change this keyword to anything you want for integer type
         "string": "string",    # Change this keyword to anything you want for string type
         "for": "for",          # Change this keyword to anything you want for 'for' loop
-        "endfor": "endfor"     # Change this keyword to anything you want for ending the 'for' loop
+        "endfor": "endfor"     # No longer needed
     }
     
     interpreter = Interpreter(config)

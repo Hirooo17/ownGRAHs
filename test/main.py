@@ -226,8 +226,8 @@ class IDE:
 
 def main():
     config = {
-        "declare": ["grah", "hero"],   # Change this keyword to anything you want for variable declaration
-        "display": ["display-"], # Change this keyword to anything you want for display
+        "declare": ["grah", "hero", "d"],   # Change this keyword to anything you want for variable declaration
+        "display": ["display-", "print"], # Change this keyword to anything you want for display
         "int": "int",         # Change this keyword to anything you want for integer type
         "string": "string",    # Change this keyword to anything you want for string type
         "for": "for",          # Change this keyword to anything you want for 'for' loop
