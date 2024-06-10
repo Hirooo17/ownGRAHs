@@ -5,6 +5,8 @@ class Interpreter:
         self.variables = {}
         self.config = config
         self.handlers = self.create_handlers(config)
+        self.line_buffer = ""  # Buffer to keep track of the current line content
+        self.last_print_was_newline = True  # Flag to track if the last print was a newline
 
     def create_handlers(self, config):
         handlers = {}
@@ -14,6 +16,7 @@ class Interpreter:
             handlers[keyword] = self.handle_display
         handlers["="] = self.handle_assignment
         handlers[config["for"]] = self.handle_for_loop
+        handlers[config["print"]] = self.handle_print
         return handlers
 
     def interpret(self, program):
@@ -63,6 +66,10 @@ class Interpreter:
             if len(tokens) < 5 or tokens[2] != "in" or tokens[3] != "range" or not re.match(r'\d+', tokens[4]) or not tokens[-1].endswith("{"):
                 print("Syntax Error: Invalid 'for' loop syntax.")
                 return False
+        elif keyword in [self.config["print"]]:  # Added validation for print and println
+            if len(tokens) < 2:
+                print(f"Syntax Error: '{keyword}' statement must have an expression.")
+                return False
         elif "=" in tokens:
             if len(tokens) < 3 or tokens[1] != "=":
                 print("Syntax Error: Invalid assignment statement.")
@@ -93,12 +100,26 @@ class Interpreter:
             return
         
         self.variables[var_name] = value
-
+        
+        # print line
     def handle_display(self, tokens):
         expr_tokens = tokens[1:]
         value = self.evaluate_expression(expr_tokens)
         if value is not None:
-            print(value)
+            if not self.last_print_was_newline:
+             print()  # Print a new line before printing the value
+        print(value)
+        self.last_print_was_newline = True # Update flag
+            
+    def handle_print(self, tokens):
+        expr_tokens = tokens[1:]
+        value = self.evaluate_expression(expr_tokens)
+        if value is not None:
+            if not self.last_print_was_newline:
+             print('', end='')  # Ensure no new line is printed
+        print(value, end='')
+        self.last_print_was_newline = False  # Update flag
+
 
     def handle_assignment(self, tokens):
         var_name = tokens[0]
@@ -197,7 +218,8 @@ def main():
         "int": "int",         # Change this keyword to anything you want for integer type
         "string": "string",    # Change this keyword to anything you want for string type
         "for": "for",          # Change this keyword to anything you want for 'for' loop
-        "endfor": "endfor"     # No longer needed
+        "endfor": "endfor",     # No longer needed
+         "print": "print", 
     }
     
     interpreter = Interpreter(config)

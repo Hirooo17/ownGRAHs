@@ -35,6 +35,8 @@ class CustomText(scrolledtext.ScrolledText):
         self.bind("<<Change>>", self._on_change)
         self.bind("<Configure>", self._on_change)
         self.bind("<KeyRelease>", self._on_key_release)
+        self.bind("<Return>", self._handle_return)
+
 
         self.tag_configure("integer", foreground="red")
         self.tag_configure("string", foreground="yellow")
@@ -79,6 +81,19 @@ class CustomText(scrolledtext.ScrolledText):
         start_index = f"{line_num}.0"
         end_index = f"{line_num}.end"
         self.tag_add("error", start_index, end_index)
+        
+    def _handle_return(self, event):
+        current_index = self.index(tk.INSERT)
+        line_start = f"{current_index.split('.')[0]}.0"
+        line_text = self.get(line_start, current_index).strip()
+
+        if line_text.endswith("{"):
+            self.insert(current_index, "\n    ")
+            return "break"
+        else:
+            self.insert(current_index, "\n")
+            return "break"
+
 
 class IDE:
     def __init__(self, root, config):
@@ -207,31 +222,16 @@ class IDE:
             f"  {self.config['endfor']}.\n"
         )
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 # CONFIF OF SYNTAXES
-
 
 def main():
     config = {
-        "declare": ["grah", "hero", "d"],   # Change this keyword to anything you want for variable declaration
-        "display": ["display-", "print"], # Change this keyword to anything you want for display
-        "int": "int",         # Change this keyword to anything you want for integer type
-        "string": "string",    # Change this keyword to anything you want for string type
-        "for": "for",          # Change this keyword to anything you want for 'for' loop
-        "endfor": "endfor"     # Change this keyword to anything you want for ending the 'for' loop
+        "declare": ["grah", "hero"],   # Change this keyword to anything you want for variable declaration
+        "display": ["display-", "println"],       # Change this keyword to anything you want for display
+        "int": "int",                  # Change this keyword to anything you want for integer type
+        "string": "string",            # Change this keyword to anything you want for string type
+        "for": "for",                  # Change this keyword to anything you want for 'for' loop
+        "print": "print",              # New keyword for print  
     }
 
     root = tk.Tk()
