@@ -71,7 +71,7 @@ class CustomText(scrolledtext.ScrolledText):
             start_index = self.index(f"1.0 + {start}c")
             end_index = self.index(f"1.0 + {end}c")
             self.tag_add("string", start_index, end_index)
-
+            
     def remove_tags(self):
         self.tag_remove("integer", "1.0", tk.END)
         self.tag_remove("string", "1.0", tk.END)
@@ -231,7 +231,11 @@ def main():
         "int": "int",                  # Change this keyword to anything you want for integer type
         "string": "string",            # Change this keyword to anything you want for string type
         "for": "for",                  # Change this keyword to anything you want for 'for' loop
-        "print": "print",              # New keyword for print  
+        "print": "print", 
+        "if"  : "if",
+        "else" : "else"
+    
+    
     }
 
     root = tk.Tk()

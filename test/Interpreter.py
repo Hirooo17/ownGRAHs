@@ -17,6 +17,7 @@ class Interpreter:
         handlers["="] = self.handle_assignment
         handlers[config["for"]] = self.handle_for_loop
         handlers[config["print"]] = self.handle_print
+        handlers[config["if"]] = self.handle_if_statement
         return handlers
 
     def interpret(self, program):
@@ -29,7 +30,7 @@ class Interpreter:
                     print("Syntax Error: Statements must end with a period.")
                     return
                 statement = line[:-1].strip() if line.endswith('.') else line
-                tokens = statement.split()
+                tokens = self.tokenize(statement)
                 matched = False
 
                 for keyword, handler in self.handlers.items():
@@ -37,6 +38,8 @@ class Interpreter:
                         if self.validate_syntax(tokens, keyword):
                             if keyword == self.config["for"]:
                                 i = self.handle_for_loop(tokens, lines, i)
+                            elif keyword == self.config["if"]:
+                                i = self.handle_if_statement(tokens, lines, i)
                             else:
                                 handler(tokens)
                         matched = True
@@ -46,6 +49,10 @@ class Interpreter:
                     print(f"Syntax Error: Unknown statement '{statement}'.")
 
             i += 1
+
+    def tokenize(self, statement):
+        # This method splits the statement into tokens while preserving quoted strings as single tokens
+        return re.findall(r'\".*?\"|\S+', statement)
 
     def validate_syntax(self, tokens, keyword):
         if keyword in self.config["declare"]:
@@ -69,6 +76,10 @@ class Interpreter:
         elif keyword in [self.config["print"]]:  # Added validation for print and println
             if len(tokens) < 2:
                 print(f"Syntax Error: '{keyword}' statement must have an expression.")
+                return False
+        elif keyword == self.config["if"]:
+            if len(tokens) < 4 or not tokens[-1].endswith("{"):
+                print("Syntax Error: Invalid 'if' statement syntax.")
                 return False
         elif "=" in tokens:
             if len(tokens) < 3 or tokens[1] != "=":
@@ -100,31 +111,29 @@ class Interpreter:
             return
         
         self.variables[var_name] = value
-        
-        # print line
+
     def handle_display(self, tokens):
         expr_tokens = tokens[1:]
         value = self.evaluate_expression(expr_tokens)
         if value is not None:
             if not self.last_print_was_newline:
-             print()  # Print a new line before printing the value
-        print(value)
-        self.last_print_was_newline = True # Update flag
+                print()  # Print a new line before printing the value
+            print(value)
+        self.last_print_was_newline = True  # Update flag
             
     def handle_print(self, tokens):
         expr_tokens = tokens[1:]
         value = self.evaluate_expression(expr_tokens)
         if value is not None:
             if not self.last_print_was_newline:
-             print('', end='')  # Ensure no new line is printed
-        print(value, end='')
+                print('', end='')  # Ensure no new line is printed
+            print(value, end='')
         self.last_print_was_newline = False  # Update flag
-
 
     def handle_assignment(self, tokens):
         var_name = tokens[0]
         if var_name not in self.variables:
-            print(f"Error: Variable '{var_name}' is used before being declared with '{self.config["declare"]}'.")
+            print(f"Error: Variable '{var_name}' is used before being declared with '{self.config['declare']}'.")
             return
         expr = " ".join(tokens[2:])
         value = self.evaluate_expression(expr.split())
@@ -159,9 +168,59 @@ class Interpreter:
         
         return i
 
+    def handle_if_statement(self, tokens, lines, start_index):
+        condition_expr = " ".join(tokens[1:-1])
+        condition = self.evaluate_expression(condition_expr.split())
+        
+        if_body = []
+        else_body = []
+        current_body = if_body
+        i = start_index + 1
+        nested_level = 1
+
+        while i < len(lines):
+            line = lines[i].strip()
+            print("Debugging mode:")
+            print(f"Processing line: {line}, nested_level: {nested_level}")
+            
+            if line == "{":
+                nested_level += 1
+            elif line == "}":
+                nested_level -= 1
+                if nested_level == 0:
+                    break
+            elif line.startswith(self.config["else"]) and nested_level == 1:
+                print("Switching to else body")
+                current_body = else_body
+                continue
+            current_body.append(line)
+            i += 1
+
+        if nested_level != 0:
+            print("Syntax Error: Mismatched braces in 'if' statement.")
+            return start_index
+
+        # Remove the 'else {' line from if_body
+        if len(if_body) > 0 and if_body[-1] == self.config["else"] + " {":
+            if_body.pop()
+        
+        print("If body:", if_body)
+        print("Else body:", else_body)
+        print("Output:\n")
+        
+        if condition:
+            self.interpret("\n".join(if_body))
+        else:
+            self.interpret("\n".join(else_body))
+        
+        return i
+
+
+
+
     def evaluate_expression(self, tokens):
         stack = []
-        precedence = {'+': 1, '-': 1, '*': 2, '/': 2}
+        precedence = {'+': 1, '-': 1, '*': 2, '/': 2, '>': 0, '<': 0, '>=': 0, '<=': 0, '==': 0, '!=': 0}
 
         def apply_operator(operators, values):
             operator = operators.pop()
@@ -178,6 +237,18 @@ class Interpreter:
                     print("Error: Division by zero.")
                     return None
                 values.append(left / right)
+            elif operator == '>':
+                values.append(left > right)
+            elif operator == '<':
+                values.append(left < right)
+            elif operator == '>=':
+                values.append(left >= right)
+            elif operator == '<=':
+                values.append(left <= right)
+            elif operator == '==':
+                values.append(left == right)
+            elif operator == '!=':
+                values.append(left != right)
 
         operators = []
         values = []
@@ -186,11 +257,12 @@ class Interpreter:
             token = tokens[i]
             if token.isdigit():
                 values.append(int(token))
-            elif re.match(r'^[a-zA-Z_]\w*$', token) and token in self.variables:
-                values.append(self.variables[token])
             elif re.match(r'^[a-zA-Z_]\w*$', token):
-                print(f"Error: Variable '{token}' is not defined.")
-                return None
+                if token in self.variables:
+                    values.append(self.variables[token])
+                else:
+                    print(f"Error: Variable '{token}' is not defined.")
+                    return None
             elif token in precedence:
                 while (operators and operators[-1] in precedence and
                        precedence[operators[-1]] >= precedence[token]):
@@ -218,8 +290,9 @@ def main():
         "int": "int",         # Change this keyword to anything you want for integer type
         "string": "string",    # Change this keyword to anything you want for string type
         "for": "for",          # Change this keyword to anything you want for 'for' loop
-        "endfor": "endfor",     # No longer needed
-         "print": "print", 
+        "if": "if",            # Change this keyword to anything you want for 'if' statement
+        "else": "else",        # Change this keyword to anything you want for 'else' statement
+        "print": "print", 
     }
     
     interpreter = Interpreter(config)
