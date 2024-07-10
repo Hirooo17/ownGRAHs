@@ -18,6 +18,7 @@ class Interpreter:
         handlers[config["for"]] = self.handle_for_loop
         handlers[config["print"]] = self.handle_print
         handlers[config["if"]] = self.handle_if_statement
+        handlers[config["switch"]] = self.handle_switch_statement
         return handlers
 
     def interpret(self, program):
@@ -40,6 +41,8 @@ class Interpreter:
                                 i = self.handle_for_loop(tokens, lines, i)
                             elif keyword == self.config["if"]:
                                 i = self.handle_if_statement(tokens, lines, i)
+                            elif keyword == self.config["switch"]:
+                                i = self.handle_switch_statement(tokens, lines, i)
                             else:
                                 handler(tokens)
                         matched = True
@@ -51,6 +54,7 @@ class Interpreter:
             i += 1
 
     def tokenize(self, statement):
+        
         # This method splits the statement into tokens while preserving quoted strings as single tokens
         return re.findall(r'\".*?\"|\S+', statement)
 
@@ -73,13 +77,17 @@ class Interpreter:
             if len(tokens) < 5 or tokens[2] != "in" or tokens[3] != "range" or not re.match(r'\d+', tokens[4]) or not tokens[-1].endswith("{"):
                 print("Syntax Error: Invalid 'for' loop syntax.")
                 return False
-        elif keyword in [self.config["print"]]:  # Added validation for print and println
+        elif keyword in [self.config["print"]]:  
             if len(tokens) < 2:
                 print(f"Syntax Error: '{keyword}' statement must have an expression.")
                 return False
         elif keyword == self.config["if"]:
             if len(tokens) < 4 or not tokens[-1].endswith("{"):
                 print("Syntax Error: Invalid 'if' statement syntax.")
+                return False
+        elif keyword == self.config["switch"]:
+            if len(tokens) < 2 or not tokens[-1].endswith("{"):
+                print("Syntax Error: Invalid 'switch' statement syntax.")
                 return False
         elif "=" in tokens:
             if len(tokens) < 3 or tokens[1] != "=":
@@ -95,6 +103,7 @@ class Interpreter:
 
     def handle_declaration(self, tokens):
         if len(tokens) < 5 or tokens[3] != "=":
+            
             print("Syntax Error: Invalid variable declaration.")
             return
         var_type = tokens[1]
@@ -215,8 +224,49 @@ class Interpreter:
         
         return i
 
+    def handle_switch_statement(self, tokens, lines, start_index):
+        switch_var = tokens[1]
 
+        case_bodies = {}
+        default_body = []
+        current_case = None
+        i = start_index + 1
+        nested_level = 1
 
+        while i < len(lines):
+            line = lines[i].strip()
+            if line == "{":
+                nested_level += 1
+            elif line == "}":
+                nested_level -= 1
+                if nested_level == 0:
+                    break
+            elif line.startswith(self.config["case"]):
+                current_case = line.split()[1].strip(":")
+                case_bodies[current_case] = []
+            elif line.startswith(self.config["default"]):
+                current_case = "default"
+            elif current_case is not None:
+                if current_case == "default":
+                    default_body.append(line)
+                else:
+                    case_bodies[current_case].append(line)
+            i += 1
+
+        if nested_level != 0:
+            print("Syntax Error: Mismatched braces in 'switch' statement.")
+            return start_index
+
+        if switch_var in self.variables:
+            switch_value = self.variables[switch_var]
+            if str(switch_value) in case_bodies:
+                self.interpret("\n".join(case_bodies[str(switch_value)]))
+            elif "default" in case_bodies:
+                self.interpret("\n".join(case_bodies["default"]))
+        else:
+            print(f"Error: Variable '{switch_var}' is not defined.")
+        
+        return i
 
     def evaluate_expression(self, tokens):
         stack = []
@@ -292,7 +342,10 @@ def main():
         "for": "for",          # Change this keyword to anything you want for 'for' loop
         "if": "if",            # Change this keyword to anything you want for 'if' statement
         "else": "else",        # Change this keyword to anything you want for 'else' statement
-        "print": "print", 
+        "print": "print",
+        "switch": "switch",    # Add this keyword for 'switch' statement
+        "case": "case",        # Add this keyword for 'case' statement
+        "default": "default",  # Add this keyword for 'default' case
     }
     
     interpreter = Interpreter(config)

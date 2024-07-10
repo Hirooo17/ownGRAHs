@@ -218,24 +218,31 @@ class IDE:
             f"  {self.config['display'][0]} <expression>.\n\n"
             "For Loops:\n"
             f"  {self.config['for']} <variable> in range (<integer>):\n"
-            f"    <statements>\n"
-            f"  {self.config['endfor']}.\n"
+            "    <statements>\n"
+            f"  {self.config['for']}.\n\n"
+            "Conditional Statements:\n"
+            f"  {self.config['if']} <condition>:\n"
+            "    <statements>\n"
+            f"  {self.config['else']}:\n"
+            "    <statements>\n"
+            f"  {self.config['for']}.\n"
         )
 
-# CONFIF OF SYNTAXES
+# CONFIG OF SYNTAXES
 
 def main():
     config = {
-        "declare": ["grah", "hero"],   # Change this keyword to anything you want for variable declaration
+        "declare": ["grah", "hero", "eulen"],   # Change this keyword to anything you want for variable declaration
         "display": ["display-", "println"],       # Change this keyword to anything you want for display
         "int": "int",                  # Change this keyword to anything you want for integer type
         "string": "string",            # Change this keyword to anything you want for string type
         "for": "for",                  # Change this keyword to anything you want for 'for' loop
-        "print": "print", 
+        "print": "print",  
         "if"  : "if",
-        "else" : "else"
-    
-    
+        "else" : "else",
+        "switch": "switch",    # Add this keyword for 'switch' statement
+        "case": "case",        # Add this keyword for 'case' statement
+        "default": "default",  # Add this keyword for 'default' case
     }
 
     root = tk.Tk()
@@ -244,3 +251,25 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
